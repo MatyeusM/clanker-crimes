@@ -1,0 +1,135 @@
+---
+import { mdiRobotConfused, mdiWeatherSunny, mdiWeatherNight } from '@mdi/js'
+import Button from './Button.astro'
+import pkg from '../../package.json'
+const version = pkg.version
+---
+
+<header class="header">
+  <a class="brand" href="/" aria-label="Clanker Crimes home">
+    <svg class="clanker" viewBox="0 0 24 24" aria-hidden="true">
+      <path d={mdiRobotConfused}></path>
+    </svg>
+
+    <span class="wordmark" aria-hidden="true">
+      <span class="clanker-word">Clanker</span>
+
+      <span class="crimes-line">
+        <span class="crimes-word">Crimes</span>
+        <span class="version">v{version}</span>
+      </span>
+    </span>
+  </a>
+  <nav class="theme-switcher" aria-label="Color theme">
+    <span class="theme-btn theme-btn-dark">
+      <Button icon={mdiWeatherNight} label="Dark" ariaLabel="Switch to dark mode" />
+    </span>
+    <span class="theme-btn theme-btn-light">
+      <Button icon={mdiWeatherSunny} label="Light" ariaLabel="Switch to light mode" />
+    </span>
+  </nav>
+</header>
+
+<script>
+  const switcher = document.querySelector('.theme-switcher')
+  const darkButton = document.querySelector('.theme-btn-dark button')
+  const lightButton = document.querySelector('.theme-btn-light button')
+
+  function setTheme(theme: 'dark' | 'light') {
+    document.documentElement.style.colorScheme = theme
+    localStorage.setItem('theme', theme)
+
+    // Toggle active state class
+    switcher?.setAttribute('data-theme', theme)
+  }
+
+  darkButton?.addEventListener('click', () => setTheme('dark'))
+  lightButton?.addEventListener('click', () => setTheme('light'))
+
+  // Initialize theme
+  const savedTheme = localStorage.getItem('theme')
+  if (savedTheme === 'dark' || savedTheme === 'light') {
+    setTheme(savedTheme)
+  } else {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+    setTheme(prefersDark ? 'dark' : 'light')
+  }
+</script>
+
+<style>
+  .header {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--color-border);
+    padding: 0.75rem 1.25rem;
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    color: var(--color-brand);
+    text-decoration: none;
+  }
+  .clanker {
+    width: 3rem;
+    height: 3rem;
+    flex: 0 0 auto;
+    fill: currentColor;
+  }
+  .wordmark {
+    display: flex;
+    flex-direction: column;
+    margin-left: 0.65rem;
+    font-family: var(--font-brand);
+    font-size: 2rem;
+    line-height: 0.8;
+  }
+
+  .clanker-word {
+    align-self: flex-start;
+  }
+
+  .crimes-line {
+    display: flex;
+    align-items: baseline;
+    margin-top: 0.2rem;
+    margin-left: 2.1rem;
+  }
+
+  .crimes-word {
+    flex: 0 0 auto;
+  }
+
+  .version {
+    margin-left: 0.45rem;
+    color: var(--color-text-subtle);
+    font-family: var(--font-ui);
+    font-size: 0.625rem;
+    font-weight: 500;
+    line-height: 1;
+  }
+
+  /* Theme switcher right-alignment */
+  .theme-switcher {
+    display: flex;
+    margin-left: auto;
+  }
+
+  /* Hide the dark button when dark theme is active */
+  .theme-switcher[data-theme='dark'] .theme-btn-dark {
+    display: none;
+  }
+
+  /* Hide the light button when light theme is active */
+  .theme-switcher[data-theme='light'] .theme-btn-light {
+    display: none;
+  }
+
+  .theme-btn {
+    width: 7rem;
+  }
+
+  .theme-btn :global(button) {
+    width: 100%;
+    justify-content: center;
+  }
+</style>

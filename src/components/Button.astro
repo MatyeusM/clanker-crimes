@@ -1,0 +1,48 @@
+---
+interface Props {
+  label?: string
+  icon?: string
+  type?: 'button' | 'submit' | 'reset'
+  ariaLabel?: string
+}
+const { label, icon, type = 'button', ariaLabel = label } = Astro.props
+---
+
+<button type={type} aria-label={ariaLabel}>
+  {
+    icon && (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        {' '}
+        <path d={icon} />{' '}
+      </svg>
+    )
+  }
+  {label && <span>{label}</span>}
+</button>
+<style>
+  button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid var(--color-border);
+    padding: 0.4rem 0.7rem;
+    background: var(--color-surface);
+    color: var(--color-text);
+    font: inherit;
+    cursor: pointer;
+  }
+  button:hover {
+    background: var(--color-surface-hover);
+    border-color: var(--color-border-strong);
+  }
+  button:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+  svg {
+    width: 1.1em;
+    height: 1.1em;
+    flex: 0 0 auto;
+    fill: currentColor;
+  }
+</style>

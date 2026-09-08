@@ -12,9 +12,16 @@
     "astro": "astro"
   },
   "dependencies": {
-    "astro": "^7.3.1"
+    "@mdi/js": "^7.4.47",
+    "astro": "^7.3.1",
+    "modern-normalize": "^3.0.1"
   },
   "allowScripts": {
     "esbuild": true
+  },
+  "devDependencies": {
+    "prettier": "^3.9.6",
+    "prettier-plugin-astro": "^0.14.1",
+    "shiki": "^4.4.3"
   }
 }
