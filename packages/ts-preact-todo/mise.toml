@@ -1,0 +1,12 @@
+[tools]
+node = "26.8.2"
+pnpm = "12.3.4"
+
+[tasks.setup]
+run = "pnpm install"
+
+[tasks.dev]
+run = "pnpm dev"
+
+[tasks.build]
+run = "pnpm build"

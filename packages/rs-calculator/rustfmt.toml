@@ -1,0 +1,4 @@
+# Shared formatting rules: spaces, 2-wide indent (kept consistent across all
+# projects in the portfolio, even though the Rust community default is 4).
+tab_spaces = 2
+hard_tabs = false

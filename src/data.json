@@ -1,0 +1,162 @@
+[
+  {
+    "key": "godfile",
+    "name": "God File",
+    "description": "The AI generator kept adding unrelated content to a single file instead of honoring a proper separation of concerns."
+  },
+  {
+    "key": "overabstraction",
+    "name": "Over-Abstraction",
+    "description": "A trait, a factory and a service for everything, including things that are used exactly once."
+  },
+  {
+    "key": "overengineering",
+    "name": "Over-Engineering",
+    "description": "A multi-stage pipeline with strategies and providers where a single plain function would do."
+  },
+  {
+    "key": "comment-spam",
+    "name": "Comment Spam",
+    "description": "Shouted section headers, ASCII architecture diagrams and jokes where readable code would suffice."
+  },
+  {
+    "key": "orphaned-code",
+    "name": "Orphaned Code",
+    "description": "Commented-out code kept around for historical reasons, as if version control did not exist."
+  },
+  {
+    "key": "magic-numbers",
+    "name": "Magic Numbers",
+    "description": "Unexplained numeric literals scattered through the logic instead of named constants."
+  },
+  {
+    "key": "copy-paste",
+    "name": "Copy-Paste Programming",
+    "description": "The same block duplicated across files with tiny variations instead of a shared helper."
+  },
+  {
+    "key": "dead-code",
+    "name": "Dead Code",
+    "description": "Functions and branches that can never run, left behind because deleting felt risky."
+  },
+  {
+    "key": "inconsistent-naming",
+    "name": "Inconsistent Naming",
+    "description": "The same concept called three different names depending on which file you are reading."
+  },
+  {
+    "key": "giant-function",
+    "name": "Giant Function",
+    "description": "One function that parses, validates, computes and renders, daring you to read it all."
+  },
+  {
+    "key": "boolean-trap",
+    "name": "Boolean Trap",
+    "description": "Bare true/false arguments at call sites that tell you nothing about what they switch."
+  },
+  {
+    "key": "error-swallowing",
+    "name": "Swallowed Errors",
+    "description": "Failures caught and silently discarded, so broken states look exactly like working ones."
+  },
+  {
+    "key": "lying-comments",
+    "name": "Lying Comments",
+    "description": "Comments that confidently describe behavior the code next to them does not have."
+  },
+  {
+    "key": "strange-api",
+    "name": "Strange API",
+    "description": "A public function returning a shape nobody can explain, kept that way because tests depend on it."
+  },
+  {
+    "key": "stringly-typed",
+    "name": "Stringly Typed",
+    "description": "Structured data passed around as raw strings instead of the types sitting one import away."
+  },
+  {
+    "key": "global-state",
+    "name": "Global State",
+    "description": "Mutable state reachable from everywhere, so every bug could have come from anywhere."
+  },
+  {
+    "key": "hardcoded-text",
+    "name": "Hardcoded Text",
+    "description": "User-facing strings baked into the logic where constants or resources belong."
+  },
+  {
+    "key": "premature-optimization",
+    "name": "Premature Optimization",
+    "description": "Hand-rolled caching and pooling around code that was never measured and never slow."
+  },
+  {
+    "key": "dependency-bloat",
+    "name": "Dependency Bloat",
+    "description": "A new dependency for every tiny job the standard library already does."
+  },
+  {
+    "key": "flag-args",
+    "name": "Flag Arguments",
+    "description": "One function that does two different things depending on a boolean you pass it."
+  },
+  {
+    "key": "ts:any-spam",
+    "name": "Any Everywhere",
+    "description": "Every prop, event and helper typed as any while the validation schemas sit right there unused."
+  },
+  {
+    "key": "ts:assertion-spam",
+    "name": "Assertion Spam",
+    "description": "as-casts sprinkled over values the compiler rightly refused to accept."
+  },
+  {
+    "key": "ts:non-null-spam",
+    "name": "Non-Null Spam",
+    "description": "Trailing ! operators asserting values exist instead of handling the case where they do not."
+  },
+  {
+    "key": "ts:zod-bypass",
+    "name": "Validation Bypass",
+    "description": "Schemas are defined with zod and then ignored exactly where untrusted input arrives."
+  },
+  {
+    "key": "ts:index-keys",
+    "name": "Index Keys",
+    "description": "List items keyed by array index, so reordering the list scrambles the state."
+  },
+  {
+    "key": "ts:effect-abuse",
+    "name": "Effect Abuse",
+    "description": "Effects used for derived state and event handling that plain computation would cover."
+  },
+  {
+    "key": "rs:unwrap-spam",
+    "name": "Unwrap Everywhere",
+    "description": "Results and options unwrapped along every path, turning recoverable errors into panics."
+  },
+  {
+    "key": "rs:panic-branch",
+    "name": "Panic Branches",
+    "description": "Branches that panic on inputs the type system allowed, instead of returning an error."
+  },
+  {
+    "key": "rs:clone-spam",
+    "name": "Clone Spam",
+    "description": "Values cloned at every step because reasoning about ownership felt like too much."
+  },
+  {
+    "key": "rs:module-spam",
+    "name": "Module Spam",
+    "description": "One file per tiny action, so reading a single operation means opening half the tree."
+  },
+  {
+    "key": "rs:string-parsing",
+    "name": "Stringly Parsing",
+    "description": "Tokens re-parsed from display strings instead of carrying the structured value along."
+  },
+  {
+    "key": "rs:test-in-lib",
+    "name": "Tests In The Library",
+    "description": "The unit tests live inside the shipping library file, inflating the artifact they test."
+  }
+]

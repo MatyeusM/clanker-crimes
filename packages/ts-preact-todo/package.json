@@ -1,0 +1,27 @@
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check"
+  },
+  "dependencies": {
+    "lucide-preact": "^1.43.0",
+    "nanoid": "^6.0.1",
+    "preact": "^10.29.8",
+    "preact-iso": "^2.12.2",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.10.6",
+    "oxfmt": "^0.67.0",
+    "oxlint": "^1.82.0",
+    "typescript": "^7.0.2",
+    "vite": "^7.3.6"
+  }
+}

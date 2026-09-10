@@ -1,0 +1,8 @@
+[tools]
+rust = "1.98.1"
+
+[tasks.build]
+run = "cargo build --release"
+
+[tasks.dev]
+run = "cargo run"

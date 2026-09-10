@@ -47,6 +47,14 @@
 }
 
 @font-face {
+  font-family: 'Cascadia Code';
+  src: url('../assets/cascadia-code-v5-latin-italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
   font-family: 'Kaushan Script';
   src: url('../assets/kaushan-script-v19-latin-regular.woff2') format('woff2');
   font-weight: 400;

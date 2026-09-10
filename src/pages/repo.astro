@@ -1,0 +1,655 @@
+---
+import Layout from '../layouts/Layout.astro'
+import Button from '../components/Button.astro'
+import {
+  mdiDownload,
+  mdiEye,
+  mdiFolder,
+  mdiFile,
+  mdiGavel,
+  mdiChevronUp,
+  mdiChevronDown,
+} from '@mdi/js'
+---
+
+<Layout>
+  <div class="case" data-state="loading">
+    <p class="status" data-status="loading">Loading the case file…</p>
+    <p class="status" data-status="error" hidden></p>
+
+    <div class="viewer" hidden>
+      <div class="case-bar">
+        <div class="case-title">
+          <span class="case-label">CASE</span>
+          <strong class="case-slug"></strong>
+          <span class="case-count"></span>
+        </div>
+        <div class="case-links">
+          <a class="case-link" data-link="artifact" download>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path></path></svg>
+            <span>.zip</span>
+          </a>
+          <a class="case-link" data-link="preview" target="_blank" rel="noopener" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path></path></svg>
+            <span>preview</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="browser">
+        <nav class="tree" aria-label="Repository files"></nav>
+        <section class="code-pane">
+          <div class="code-path" aria-live="polite"></div>
+          <div class="code-view" tabindex="0"></div>
+        </section>
+      </div>
+    </div>
+
+    <section class="verdict" hidden>
+      <button type="button" class="verdict-toggle" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path></path></svg>
+        <span>Submit your verdict</span>
+        <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><path></path></svg>
+      </button>
+      <div class="verdict-body" hidden>
+        <p class="verdict-hint">
+          Select every crime you found in this repository. All of them. No pressure.
+        </p>
+        <form class="verdict-form">
+          <fieldset class="choices"></fieldset>
+          <p class="verdict-error" role="alert" hidden></p>
+          <div class="verdict-actions">
+            <Button type="submit" label="Submit verdict" ariaLabel="Submit verdict" />
+          </div>
+        </form>
+        <div class="victory" hidden>
+          <h2>Case closed.</h2>
+          <p>You caught every crime the clanker left behind. Tell your friends about it.</p>
+          <div class="victory-actions">
+            <Button label="Copy case link" ariaLabel="Copy case link" />
+            <a class="victory-share" target="_blank" rel="noopener">Post about it</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</Layout>
+
+<script
+  define:vars={{ mdiDownload, mdiEye, mdiFolder, mdiFile, mdiGavel, mdiChevronUp, mdiChevronDown }}
+>
+  const root = document.querySelector('.case')
+  const viewer = root.querySelector('.viewer')
+  const loadingStatus = root.querySelector('[data-status="loading"]')
+  const errorStatus = root.querySelector('[data-status="error"]')
+  const tree = root.querySelector('.tree')
+  const codePath = root.querySelector('.code-path')
+  const codeView = root.querySelector('.code-view')
+  const slugEl = root.querySelector('.case-slug')
+  const countEl = root.querySelector('.case-count')
+  const artifactLink = root.querySelector('[data-link="artifact"]')
+  const previewLink = root.querySelector('[data-link="preview"]')
+  const verdict = root.querySelector('.verdict')
+  const toggle = root.querySelector('.verdict-toggle')
+  const toggleChevron = toggle.querySelector('.chevron path')
+  const verdictBody = root.querySelector('.verdict-body')
+  const choicesEl = root.querySelector('.choices')
+  const form = root.querySelector('.verdict-form')
+  const verdictError = root.querySelector('.verdict-error')
+  const victory = root.querySelector('.victory')
+
+  toggle.querySelector('svg:not(.chevron) path').setAttribute('d', mdiGavel)
+  toggleChevron.setAttribute('d', mdiChevronUp)
+  artifactLink.querySelector('path').setAttribute('d', mdiDownload)
+  previewLink.querySelector('path').setAttribute('d', mdiEye)
+
+  const params = new URLSearchParams(location.search)
+  const slug = params.get('case') ?? params.get('repo') ?? 'alpha'
+  const base = `/case/${encodeURIComponent(slug)}`
+
+  let files = []
+  let choices = []
+  let meta = { hasPreview: false }
+  let currentFile = null
+  let codeTheme = null
+
+  function showError(message) {
+    root.dataset.state = 'error'
+    loadingStatus.hidden = true
+    viewer.hidden = true
+    verdict.hidden = true
+    errorStatus.hidden = false
+    errorStatus.textContent = message
+  }
+
+  function resolveTheme() {
+    const saved = localStorage.getItem('theme')
+    if (saved === 'dark' || saved === 'light') return saved
+    return matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  }
+
+  // SHA-256 via Web Crypto, matching scripts/build/cases.mjs on the build side.
+  async function sha256Hex(text) {
+    const subtle = globalThis.crypto?.subtle
+    if (!subtle) throw new Error('Web Crypto is unavailable')
+    const digest = await subtle.digest('SHA-256', new TextEncoder().encode(text))
+    return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('')
+  }
+
+  function buildTree(paths) {
+    const rootNode = { dirs: new Map(), files: [] }
+    for (const path of paths) {
+      const parts = path.split('/')
+      let node = rootNode
+      for (const part of parts.slice(0, -1)) {
+        if (!node.dirs.has(part)) node.dirs.set(part, { dirs: new Map(), files: [] })
+        node = node.dirs.get(part)
+      }
+      node.files.push(parts[parts.length - 1])
+    }
+    return rootNode
+  }
+
+  function renderTree(node, container, prefix) {
+    for (const [name, child] of [...node.dirs.entries()].sort()) {
+      const details = document.createElement('details')
+      details.open = true
+      const summary = document.createElement('summary')
+      const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+      icon.setAttribute('viewBox', '0 0 24 24')
+      icon.setAttribute('aria-hidden', 'true')
+      const iconPath = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+      iconPath.setAttribute('d', mdiFolder)
+      icon.appendChild(iconPath)
+      summary.append(icon, document.createTextNode(name))
+      details.appendChild(summary)
+      const sub = document.createElement('div')
+      sub.className = 'tree-sub'
+      renderTree(child, sub, `${prefix}${name}/`)
+      details.appendChild(sub)
+      container.appendChild(details)
+    }
+    for (const name of [...node.files].sort()) {
+      const button = document.createElement('button')
+      button.type = 'button'
+      button.className = 'tree-file'
+      button.dataset.path = `${prefix}${name}`
+      const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+      icon.setAttribute('viewBox', '0 0 24 24')
+      icon.setAttribute('aria-hidden', 'true')
+      const iconPath = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+      iconPath.setAttribute('d', mdiFile)
+      icon.appendChild(iconPath)
+      button.append(icon, document.createTextNode(name))
+      button.addEventListener('click', () => selectFile(button.dataset.path))
+      container.appendChild(button)
+    }
+  }
+
+  function markSelected() {
+    tree.querySelectorAll('.tree-file').forEach(el => {
+      el.classList.toggle('selected', el.dataset.path === currentFile)
+    })
+  }
+
+  async function selectFile(path) {
+    currentFile = path
+    codeTheme = resolveTheme()
+    markSelected()
+    codePath.textContent = path
+    codeView.innerHTML = '<p class="code-loading">Loading file…</p>'
+    try {
+      const res = await fetch(
+        `${base}/${codeTheme}/${encodeURIComponent(path).replaceAll('%2F', '/')}.html`,
+      )
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      codeView.innerHTML = await res.text()
+    } catch {
+      codeView.innerHTML = '<p class="code-loading">Could not load this file.</p>'
+    }
+  }
+
+  function renderChoices() {
+    choicesEl.innerHTML = ''
+    choices.forEach((choice, index) => {
+      const label = document.createElement('label')
+      label.className = 'choice'
+      const input = document.createElement('input')
+      input.type = 'checkbox'
+      input.name = 'crime'
+      input.value = String(index)
+      const body = document.createElement('span')
+      body.className = 'choice-body'
+      const name = document.createElement('strong')
+      name.textContent = choice.name
+      const desc = document.createElement('span')
+      desc.className = 'choice-desc'
+      desc.textContent = choice.description
+      body.append(name, desc)
+      label.append(input, body)
+      choicesEl.appendChild(label)
+    })
+  }
+
+  toggle.addEventListener('click', () => {
+    const open = verdictBody.hidden
+    verdictBody.hidden = !open
+    toggle.setAttribute('aria-expanded', String(open))
+    toggleChevron.setAttribute('d', open ? mdiChevronDown : mdiChevronUp)
+  })
+
+  form.addEventListener('submit', async event => {
+    event.preventDefault()
+    verdictError.hidden = true
+    const picked = new Set(new FormData(form).getAll('crime').map(String))
+    const bits = choices.map((_, index) => (picked.has(String(index)) ? '1' : '0')).join('')
+    const submitButton = form.querySelector('button')
+    submitButton.disabled = true
+    try {
+      const hash = await sha256Hex(slug + bits)
+      const res = await fetch(`${base}/${hash}.json`)
+      if (!res.ok) {
+        verdictError.textContent =
+          'That verdict does not hold up. Review the evidence and try again.'
+        verdictError.hidden = false
+        return
+      }
+      const { url } = await res.json()
+      if (url) {
+        location.href = `/repo?case=${encodeURIComponent(url)}`
+      } else {
+        form.hidden = true
+        victory.hidden = false
+        const shareText = 'I closed every Clanker Crimes case. The code was guilty.'
+        victory.querySelector('.victory-share').href =
+          `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(location.origin)}`
+        victory.querySelector('.victory-actions button').addEventListener(
+          'click',
+          async () => {
+            try {
+              await navigator.clipboard.writeText(`${shareText} ${location.origin}`)
+            } catch {
+              /* clipboard unavailable */
+            }
+          },
+          { once: true },
+        )
+      }
+    } catch {
+      verdictError.textContent =
+        'Could not check your verdict in this browser. A secure context is required.'
+      verdictError.hidden = false
+    } finally {
+      submitButton.disabled = false
+    }
+  })
+
+  // Re-render code when the site theme changes.
+  document.addEventListener('click', event => {
+    if (event.target.closest('.theme-btn-dark, .theme-btn-light')) {
+      setTimeout(() => {
+        if (currentFile && resolveTheme() !== codeTheme) selectFile(currentFile)
+      }, 0)
+    }
+  })
+
+  async function init() {
+    slugEl.textContent = slug
+    let manifest
+    try {
+      const [filesRes, choicesRes, metaRes] = await Promise.all([
+        fetch(`${base}/files.json`),
+        fetch(`${base}/choices.json`),
+        fetch(`${base}/meta.json`),
+      ])
+      if (!filesRes.ok || !choicesRes.ok)
+        throw new Error(`HTTP ${filesRes.status}/${choicesRes.status}`)
+      manifest = await filesRes.json()
+      choices = await choicesRes.json()
+      meta = metaRes.ok ? await metaRes.json() : { hasPreview: false }
+    } catch {
+      showError(`No case file for "${slug}". Run the build first, or start from the alpha case.`)
+      return
+    }
+
+    files = manifest.map(entry => entry.path)
+    countEl.textContent = `${files.length} files`
+    artifactLink.href = `${base}/artifact.zip`
+    if (meta.hasPreview) {
+      previewLink.href = `${base}/preview.html`
+      previewLink.hidden = false
+    }
+
+    renderTree(buildTree(files), tree, '')
+    renderChoices()
+    root.dataset.state = 'ready'
+    loadingStatus.hidden = true
+    viewer.hidden = false
+    verdict.hidden = false
+    if (files.length > 0) selectFile(files.includes('README.md') ? 'README.md' : files[0])
+  }
+
+  init()
+</script>
+
+<style is:global>
+  /* Global (not scoped): file tree, code view and verdict are rendered by
+     client-side JS, which would not carry Astro's scoping attributes. */
+  .case {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    max-width: 80rem;
+    width: 100%;
+    margin: 0 auto;
+    padding: 2rem 1.25rem 0;
+    font-family: var(--font-ui);
+  }
+  .status {
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+  }
+
+  .case-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    padding: 0.6rem 0.9rem;
+  }
+  .case-title {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    min-width: 0;
+  }
+  .case-label {
+    color: var(--color-brand);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+  }
+  .case-slug {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .case-count {
+    color: var(--color-text-subtle);
+    font-size: 0.75rem;
+  }
+  .case-links {
+    display: flex;
+    gap: 0.5rem;
+  }
+  .case-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-raised);
+    padding: 0.3rem 0.6rem;
+    color: var(--color-text);
+    font-size: 0.75rem;
+    text-decoration: none;
+  }
+  .case-link:hover {
+    background: var(--color-surface-hover);
+  }
+  .case-link[hidden] {
+    display: none;
+  }
+  .case-link svg {
+    width: 1em;
+    height: 1em;
+    fill: currentColor;
+  }
+
+  .viewer {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 5rem - 2.8rem - 2.875rem); /* hack */
+  }
+  .viewer[hidden] {
+    display: none;
+  }
+  .browser {
+    display: grid;
+    grid-template-columns: minmax(12rem, 18rem) 1fr;
+    border: 1px solid var(--color-border);
+    border-top: none;
+    flex: 1;
+    min-height: 24rem;
+    margin-bottom: 1.5rem;
+  }
+  .tree {
+    border-right: 1px solid var(--color-border);
+    padding: 0.75rem;
+    font-size: 0.8rem;
+    overflow: auto;
+    min-height: 0;
+  }
+  .tree summary {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.2rem 0.3rem;
+    cursor: pointer;
+    color: var(--color-text-muted);
+    font-weight: 700;
+  }
+  .tree svg {
+    width: 1em;
+    height: 1em;
+    flex: 0 0 auto;
+    fill: var(--color-brand);
+  }
+  .tree-file svg {
+    fill: var(--color-text-subtle);
+  }
+  .tree-sub {
+    margin-left: 0.8rem;
+    border-left: 1px solid var(--color-border);
+    padding-left: 0.4rem;
+  }
+  .tree-file {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    width: 100%;
+    border: none;
+    background: none;
+    padding: 0.2rem 0.3rem;
+    color: var(--color-text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .tree-file:hover {
+    background: var(--color-surface-hover);
+  }
+  .tree-file.selected {
+    background: var(--color-brand-subtle);
+    color: var(--color-brand-strong);
+  }
+
+  .code-pane {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+  }
+  .code-path {
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-surface);
+    padding: 0.5rem 0.9rem;
+    font-family: var(--font-code);
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .code-view {
+    padding: 0;
+    overflow: auto;
+    background: var(--color-code-bg);
+    counter-reset: code-line;
+    min-height: 0;
+  }
+  .code-view pre.shiki {
+    margin: 0;
+    padding: 1rem;
+    font-family: var(--font-code);
+    font-size: 0.82rem;
+    line-height: 1.6;
+    overflow-x: auto;
+  }
+  /* modern-normalize sets its own font-family directly on `code`, which beats
+     inheritance from the pre above — restate it explicitly. */
+  .code-view pre.shiki code {
+    font-family: var(--font-code);
+  }
+  /* Line numbers over shiki's `.line` spans. */
+  .code-view pre.shiki .line {
+    counter-increment: code-line;
+  }
+  .code-view pre.shiki .line::before {
+    content: counter(code-line);
+    display: inline-block;
+    width: 3rem;
+    margin-right: 1rem;
+    text-align: right;
+    color: var(--color-text-subtle);
+    user-select: none;
+  }
+  .code-loading {
+    padding: 1rem;
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+  }
+
+  .verdict {
+    position: sticky;
+    bottom: 0;
+    margin-top: auto;
+    border: 1px solid var(--color-border);
+    border-bottom: none;
+    background: var(--color-surface);
+  }
+  .verdict-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    width: 100%;
+    border: none;
+    background: none;
+    padding: 0.8rem 1rem;
+    color: var(--color-text);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .verdict-toggle:hover {
+    background: var(--color-surface-hover);
+  }
+  .verdict-toggle svg {
+    width: 1.2em;
+    height: 1.2em;
+    fill: var(--color-brand);
+  }
+  .verdict-toggle .chevron {
+    margin-left: auto;
+  }
+  .verdict-toggle .chevron path {
+    fill: var(--color-text-subtle);
+  }
+  .verdict-body {
+    border-top: 1px solid var(--color-border);
+    padding: 1rem;
+    max-height: 46vh;
+    overflow: auto;
+  }
+  .verdict-hint {
+    margin: 0 0 1rem;
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+  }
+  .choices {
+    display: grid;
+    gap: 0.5rem;
+    border: none;
+    margin: 0;
+    padding: 0;
+  }
+  .choice {
+    display: flex;
+    gap: 0.7rem;
+    align-items: flex-start;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-raised);
+    padding: 0.6rem 0.8rem;
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+  .choice:hover {
+    background: var(--color-surface-hover);
+  }
+  .choice input {
+    margin-top: 0.2rem;
+    accent-color: var(--color-brand);
+  }
+  .choice-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+  .choice-desc {
+    color: var(--color-text-muted);
+    font-size: 0.78rem;
+    line-height: 1.5;
+  }
+  .verdict-error {
+    color: var(--color-danger);
+    font-size: 0.85rem;
+  }
+  .verdict-actions {
+    margin-top: 1rem;
+  }
+  .victory h2 {
+    margin: 0 0 0.5rem;
+    letter-spacing: -0.02em;
+  }
+  .victory p {
+    margin: 0 0 1rem;
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+  }
+  .victory-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .victory-share {
+    color: var(--color-brand);
+    font-size: 0.85rem;
+  }
+
+  @media (max-width: 720px) {
+    .browser {
+      grid-template-columns: 1fr;
+    }
+    .tree {
+      border-right: none;
+      border-bottom: 1px solid var(--color-border);
+      max-height: 12rem;
+    }
+  }
+</style>
