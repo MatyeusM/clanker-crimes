@@ -108,8 +108,6 @@ src/
 │   │   ├── index.tsx       # Task list page: filters, search, progress
 │   │   └── style.css       # Page styles (BEM class names)
 │   └── _404.tsx            # Not-found page
-├── assets/
-│   └── preact.svg
 index.html                  # Shell, fonts, theme init script
 mise.toml                   # Pinned Node/pnpm toolchain and tasks
 oxfmt.config.ts             # Formatter config

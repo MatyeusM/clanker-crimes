@@ -1,0 +1,73 @@
+[tools]
+java = "temurin-26.0.2+101"
+
+# All tasks use only `javac` / `java` / `jar` / `jpackage` single-tool invocations
+# (chained with `&&`, which works in both sh and cmd) so they run unchanged on
+# Linux, macOS and Windows. No Maven/Gradle; JDK stdlib only (the formatter
+# task downloads one pinned jar on first use, see below).
+
+[tasks.build]
+description = "Compile Clanker Sort with plain javac (JDK only, no downloads)"
+run = "javac --release 25 -Xlint:all -encoding UTF-8 -d build/classes -sourcepath src/main/java src/main/java/com/clankerprise/sorting/ClankerSortApplication.java && cp -r src/main/resources/. build/classes/"
+run_windows = "javac --release 25 -Xlint:all -encoding UTF-8 -d build/classes -sourcepath src/main/java src/main/java/com/clankerprise/sorting/ClankerSortApplication.java && xcopy src\\main\\resources build\\classes /E /I /Y"
+
+[tasks.run]
+description = "Build and launch the Clanker Sort GUI"
+depends = ["build"]
+run = "java -cp build/classes com.clankerprise.sorting.ClankerSortApplication"
+
+[tasks.run-jar]
+description = "Build the jar and run it (same artifact as `package`)"
+depends = ["package"]
+run = "java -jar build/clanker-sort.jar"
+run_windows = "java -jar build/clanker-sort.jar"
+
+[tasks.run-native]
+description = "Build the native app image and run its launcher"
+depends = ["package-native"]
+run = "build/native/ClankerSort/bin/ClankerSort"
+run_windows = "build\\native\\ClankerSort\\ClankerSort.exe"
+
+[tasks.package]
+description = "Build a runnable cross-platform jar at build/clanker-sort.jar"
+depends = ["build"]
+run = "jar --create --file build/clanker-sort.jar --main-class com.clankerprise.sorting.ClankerSortApplication -C build/classes ."
+
+[tasks.test]
+description = "Compile and run the dependency-free test suite"
+depends = ["build"]
+run = "javac --release 25 -Xlint:all -encoding UTF-8 -cp build/classes -d build/test-classes -sourcepath src/test/java src/test/java/com/clankerprise/sorting/EnterpriseValidationSuite.java && java -cp build/test-classes:build/classes com.clankerprise.sorting.EnterpriseValidationSuite"
+run_windows = "javac --release 25 -Xlint:all -encoding UTF-8 -cp build/classes -d build/test-classes -sourcepath src/test/java src/test/java/com/clankerprise/sorting/EnterpriseValidationSuite.java && java -cp build/test-classes;build/classes com.clankerprise.sorting.EnterpriseValidationSuite"
+
+[tasks.diagnose-fonts]
+description = "Headless font diagnostics: proves Lato loads and rasterizes (no windows opened)"
+depends = ["build"]
+run = "java -Djava.awt.headless=true -cp build/classes com.clankerprise.sorting.ClankerSortApplication --diagnose-fonts"
+run_windows = "java -Djava.awt.headless=true -cp build/classes com.clankerprise.sorting.ClankerSortApplication --diagnose-fonts"
+
+[tasks.fetch-format]
+description = "Download the pinned google-java-format jar once (cached in build/tools)"
+run = "mkdir -p build/tools && test -f build/tools/google-java-format.jar || curl -sSL --max-time 120 -o build/tools/google-java-format.jar https://github.com/google/google-java-format/releases/download/v1.36.1/google-java-format-1.36.1-all-deps.jar"
+run_windows = "if not exist build\\tools mkdir build\\tools && if not exist build\\tools\\google-java-format.jar curl.exe -sSL --max-time 120 -o build\\tools\\google-java-format.jar https://github.com/google/google-java-format/releases/download/v1.36.1/google-java-format-1.36.1-all-deps.jar"
+
+[tasks.format]
+description = "Format all sources with google-java-format (2-space style, no tabs)"
+depends = ["fetch-format"]
+run = "java --add-exports jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED --add-exports jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED --add-exports jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED --add-exports jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED --add-exports jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED -jar build/tools/google-java-format.jar --replace $(find src/main/java src/test/java -name '*.java')"
+run_windows = "for /r src %f in (*.java) do @java --add-exports jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED --add-exports jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED --add-exports jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED --add-exports jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED --add-exports jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED -jar build\\tools\\google-java-format.jar --replace \"%f\""
+
+[tasks.lint]
+description = "Fail if any source is not google-java-format clean (javac -Xlint also runs in build)"
+depends = ["fetch-format"]
+run = "java --add-exports jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED --add-exports jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED --add-exports jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED --add-exports jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED --add-exports jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED -jar build/tools/google-java-format.jar --dry-run --set-exit-if-changed $(find src/main/java src/test/java -name '*.java')"
+run_windows = "for /r src %f in (*.java) do @(java --add-exports jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED --add-exports jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED --add-exports jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED --add-exports jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED --add-exports jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED -jar build\\tools\\google-java-format.jar --dry-run --set-exit-if-changed \"%f\" || set FORMAT_BAD=1) & if defined FORMAT_BAD exit /b 1"
+
+[tasks.clean]
+description = "Remove build outputs"
+run = "rm -rf build"
+run_windows = "if exist build rmdir /s /q build"
+
+[tasks.package-native]
+description = "Build a native app image with jpackage (output is platform-specific)"
+depends = ["package"]
+run = "jpackage --type app-image --name ClankerSort --input build --main-jar clanker-sort.jar --main-class com.clankerprise.sorting.ClankerSortApplication --dest build/native"

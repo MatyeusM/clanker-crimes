@@ -1,0 +1,20 @@
+[tools]
+go = "1.27.1"
+
+[tasks.dev]
+run = "mise exec -- go run ./cmd/warehouse-server"
+
+[tasks.test]
+run = "mise exec -- go test ./..."
+
+[tasks."test-race"]
+run = "mise exec -- go test -race ./..."
+
+[tasks.vet]
+run = "mise exec -- go vet ./..."
+
+[tasks.build]
+run = "mise exec -- go build -o dist/warehouse-server ./cmd/warehouse-server"
+
+[tasks.fmt]
+run = "mise exec -- gofmt -l ."

@@ -1,0 +1,11 @@
+[tools]
+node = "latest"
+pnpm = "latest"
+
+[tasks.dev]
+description = "Start the Vite dev server"
+run = "pnpm exec vite"
+
+[tasks.build]
+description = "Production build to dist/"
+run = "pnpm exec vite build"

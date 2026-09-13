@@ -1,0 +1,17 @@
+[tools]
+cmake = "4.4.3"
+ninja = "1.13.2"
+
+[tasks.clean]
+run = "rm -rf build"
+
+[tasks.configure]
+run = "cmake -S . -B build -G Ninja"
+
+[tasks.build]
+depends = ["configure"]
+run = "cmake --build build"
+
+[tasks.run]
+depends = ["build"]
+run = "./build/clanker-weather-ambience"

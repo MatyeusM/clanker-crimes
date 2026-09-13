@@ -1,0 +1,11 @@
+# build output
+dist/
+
+# local sqlite state (never commit live DBs)
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+
+# go
+bin/
