@@ -117,9 +117,8 @@ names.
 
 ## Roadmap
 
-Target: ≥10 projects before publish. Planned languages: C, C++, Rust, C#, Go,
-Python, JS/TS + frameworks — standard portfolio projects each. Next up:
-Python + htmx (server-side → code + zip only, no preview).
+Target: ≥7 projects before publish. Planned languages: C, C++, Rust, Java, Go,
+Python, JS/TS + frameworks — standard portfolio projects each.
 
 ## Known limitations / future work
 

@@ -158,5 +158,95 @@
     "key": "rs:test-in-lib",
     "name": "Tests In The Library",
     "description": "The unit tests live inside the shipping library file, inflating the artifact they test."
+  },
+  {
+    "key": "ts:zod-bloat",
+    "name": "Zod Bloat",
+    "description": "Full zod bundled for a handful of string checks where zod-mini or valibot would do at a fraction of the size."
+  },
+  {
+    "key": "ts:json-clone",
+    "name": "JSON Clone",
+    "description": "Objects deep-cloned through a JSON round-trip instead of structuredClone, dropping Dates and undefined on the floor."
+  },
+  {
+    "key": "ts:remount-key",
+    "name": "Remount Key",
+    "description": "A filter-derived key on the whole list that destroys and rebuilds every row on each keystroke instead of just filtering."
+  },
+  {
+    "key": "go:interface-spam",
+    "name": "Interface Spam",
+    "description": "Single-implementation interfaces for every package, depended on by nothing."
+  },
+  {
+    "key": "go:context-ignoring",
+    "name": "Context Ignoring",
+    "description": "Database work never takes a context, so request cancellation never reaches the queries."
+  },
+  {
+    "key": "go:else-after-return",
+    "name": "Else After Return",
+    "description": "If/else chains where Go idiom is an early return with no else."
+  },
+  {
+    "key": "py:lambda-assign",
+    "name": "Lambda Assignment",
+    "description": "Named helpers assigned as lambdas instead of plain defs, tripping the linter for no benefit."
+  },
+  {
+    "key": "py:builtin-hash",
+    "name": "Builtin-Hash Coloring",
+    "description": "Randomized builtin hash() used for a supposedly deterministic nickname-to-color mapping, so colors shuffle every restart."
+  },
+  {
+    "key": "py:except-comma",
+    "name": "Python-2 Except",
+    "description": "An exception tuple written with Python-2 comma syntax instead of parentheses."
+  },
+  {
+    "key": "py:fstring-html",
+    "name": "Unescaped F-String HTML",
+    "description": "User-controlled strings interpolated raw into HTML via f-strings, right next to code that correctly escapes."
+  },
+  {
+    "key": "java:factory-spam",
+    "name": "Factory Spam",
+    "description": "A centralized factory provisioning a lightweight stateless service that could just be a static method or new."
+  },
+  {
+    "key": "java:package-info-spam",
+    "name": "Package-Info Spam",
+    "description": "A package-info.java in every package, each restating the obvious in enterprise marketing copy."
+  },
+  {
+    "key": "c:cast-spam",
+    "name": "Cast Spam",
+    "description": "Redundant casts on values already of that type, each commented to be safe or to be explicit."
+  },
+  {
+    "key": "lua:openlibs-all",
+    "name": "Openlibs For Config",
+    "description": "A declarative config file loaded with the full standard library, giving configs io/os/package power instead of a sandbox."
+  },
+  {
+    "key": "lua:silent-config",
+    "name": "Silent Config",
+    "description": "Wrong-typed and out-of-range config values silently kept or clamped with no warning, so mistakes look like success."
+  },
+  {
+    "key": "template-cruft",
+    "name": "Template Cruft",
+    "description": "Vite/Svelte scaffold styles, images and icon sprites left unreferenced after the real UI was built."
+  },
+  {
+    "key": "svelte:div-dialog",
+    "name": "Div Dialog",
+    "description": "A hand-rolled modal div with manual focus, Escape and overlay-click instead of native dialog semantics."
+  },
+  {
+    "key": "svelte:effect-race",
+    "name": "Effect Race",
+    "description": "An async effect reacting to a store with no cancellation, so rapid recompiles can resolve out of order."
   }
 ]
