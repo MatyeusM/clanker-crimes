@@ -1,6 +1,7 @@
 name: Release
 
-# Every commit on master cuts a GitHub release with the built site.
+# Every master push deploys the built site to Pages. When the package version
+# changes, the same build is published as a versioned GitHub release.
 # The real case solutions come from the CASE_SOLUTIONS secret, which must
 # hold the exact JSON contents of .env.local.json (an array of
 # [{ pkg, crimes }]). Builder output stays spoiler-free by design, so no
@@ -63,11 +64,16 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="master-$(date +%Y%m%d)-${GITHUB_SHA::7}"
-          gh release create "$TAG" \
-            --title "$TAG" \
-            --notes "Automated build from master (${GITHUB_SHA::7})." \
-            site.zip
+          VERSION="$(node -p "require('./package.json').version")"
+          TAG="v${VERSION}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; skipping duplicate release creation."
+          else
+            gh release create "$TAG" \
+              --title "$TAG" \
+              --notes "Automated build from master (${GITHUB_SHA::7})." \
+              site.zip
+          fi
 
       # Same dist/ that shipped in the release goes live on Pages.
       - name: Upload Pages artifact
