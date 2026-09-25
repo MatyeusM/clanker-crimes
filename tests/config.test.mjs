@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import assert from 'node:assert/strict'
@@ -51,6 +51,45 @@ test('package and crime references validate', () => {
   validateCrimeReferences(loadConfig(root), loadCrimes(root))
 })
 
+test('package path traversal is rejected', () => {
+  const root = makeRoot([{ pkg: '../outside', crimes: ['fixture-crime'] }], crimes)
+  const packagesDir = join(root, 'packages')
+  mkdirSync(packagesDir, { recursive: true })
+  const child = spawnSync(
+    process.execPath,
+    [
+      '--input-type=module',
+      '-e',
+      `import * as config from ${JSON.stringify(new URL('../scripts/build/config.mjs', import.meta.url).href)};
+       config.validatePackageDirs([{ pkg: '../outside' }], ${JSON.stringify(packagesDir)});`,
+    ],
+    { encoding: 'utf8' },
+  )
+  assert.equal(child.status, 1)
+  assert.match(child.stderr, /direct packages\/ directory/)
+})
+
+test('package symlink escapes are rejected', () => {
+  const root = makeRoot([{ pkg: 'linked', crimes: ['fixture-crime'] }], crimes)
+  const packagesDir = join(root, 'packages')
+  const outsideDir = join(root, 'outside')
+  mkdirSync(packagesDir, { recursive: true })
+  mkdirSync(outsideDir, { recursive: true })
+  symlinkSync(outsideDir, join(packagesDir, 'linked'), 'dir')
+  const child = spawnSync(
+    process.execPath,
+    [
+      '--input-type=module',
+      '-e',
+      `import * as config from ${JSON.stringify(new URL('../scripts/build/config.mjs', import.meta.url).href)};
+       config.validatePackageDirs([{ pkg: 'linked' }], ${JSON.stringify(packagesDir)});`,
+    ],
+    { encoding: 'utf8' },
+  )
+  assert.equal(child.status, 1)
+  assert.match(child.stderr, /direct packages\/ directory/)
+})
+
 test('unknown crime references fail the build', () => {
   const child = spawnSync(
     process.execPath,
@@ -66,5 +105,6 @@ test('unknown crime references fail the build', () => {
     { encoding: 'utf8' },
   )
   assert.equal(child.status, 1)
-  assert.match(child.stderr, /unknown crime "missing-crime"/)
+  assert.match(child.stderr, /unknown crime key/)
+  assert.doesNotMatch(child.stderr, /missing-crime/)
 })

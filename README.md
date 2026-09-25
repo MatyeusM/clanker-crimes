@@ -96,8 +96,9 @@ output directory.
 ## CI and releases
 
 Pull requests and pushes to `dev` run formatting, unit tests, and a full build
-with throwaway solutions. Pushes to `master` run the release workflow, build
-the site, publish a release asset, and deploy `dist/` to GitHub Pages.
+with throwaway solutions. Pushes to `master` build the site and deploy `dist/`
+to GitHub Pages; when the package version changes, the workflow also publishes
+a versioned release asset.
 
 Keep generated data, local solution files, and build directories out of version
 control. Do not add solution assignments or generated case identifiers to logs

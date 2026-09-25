@@ -1,5 +1,5 @@
-import { existsSync, readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs'
+import { dirname, isAbsolute, relative, resolve, sep } from 'node:path'
 import { fail } from './util.mjs'
 
 const KEY_PATTERN = /^([A-Za-z0-9-]+:)?[A-Za-z0-9-]+$/
@@ -92,9 +92,53 @@ export function loadCrimes(root) {
 }
 
 export function validatePackageDirs(entries, packagesDir) {
+  let packagesRoot
+  try {
+    packagesRoot = realpathSync(packagesDir)
+  } catch {
+    fail('packages/ does not exist')
+  }
+
   for (const { pkg } of entries) {
-    if (!existsSync(resolve(packagesDir, pkg))) {
+    if (
+      typeof pkg !== 'string' ||
+      pkg.length === 0 ||
+      pkg === '.' ||
+      pkg === '..' ||
+      pkg.includes('/') ||
+      pkg.includes('\\')
+    ) {
+      fail(`configured package "${pkg}" is not a direct packages/ directory`)
+    }
+
+    const candidate = resolve(packagesRoot, pkg)
+    if (dirname(candidate) !== packagesRoot) {
+      fail(`configured package "${pkg}" is not a direct packages/ directory`)
+    }
+
+    let realCandidate
+    try {
+      realCandidate = realpathSync(candidate)
+    } catch {
       fail(`configured package "${pkg}" does not exist in packages/`)
+    }
+
+    let stats
+    try {
+      stats = statSync(realCandidate)
+    } catch {
+      fail(`configured package "${pkg}" does not exist in packages/`)
+    }
+    const packagePath = relative(packagesRoot, realCandidate)
+    if (
+      !stats.isDirectory() ||
+      !packagePath ||
+      packagePath === '..' ||
+      packagePath.startsWith(`..${sep}`) ||
+      isAbsolute(packagePath) ||
+      packagePath.includes(sep)
+    ) {
+      fail(`configured package "${pkg}" is not a direct packages/ directory`)
     }
   }
 }
@@ -104,7 +148,7 @@ export function validateCrimeReferences(entries, crimes) {
   for (const { pkg, crimes: configured } of entries) {
     for (const crimeKey of configured) {
       if (!known.has(crimeKey)) {
-        fail(`package "${pkg}" references unknown crime "${crimeKey}"`)
+        fail(`package "${pkg}" references an unknown crime key`)
       }
     }
     if (configured.length > 24) {

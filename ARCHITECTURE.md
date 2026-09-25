@@ -70,10 +70,11 @@ distractor picks all change. Difficulty varies per build by design.
    are pre-rendered, no client highlighting.
 3. Verdict pane (sticky bottom, collapsed by default): checkboxes in `choices.json`
    order → bit string → `crypto.subtle.digest('SHA-256', slug + bits)` →
-   fetch `<hash>.json`. Hit advances (`/repo?case=<url>`) or shows victory when
-   `url` is `null`; miss shows an error. No hand-rolled crypto on either side
-   (build uses `node:crypto`, frontend uses Web Crypto — same digest).
-4. Victory screen: "Case closed… Tell your friends about it." + copy link + share.
+   fetch `<hash>.json`. A hit opens the triumph overlay; intermediate cases
+   advance when the player clicks **Next case**, while the final case reveals
+   the victory panel. A miss shows an error. No hand-rolled crypto on either
+   side (build uses `node:crypto`, frontend uses Web Crypto — same digest).
+4. Victory panel: share/copy-link actions appear after the final triumph step.
 
 The hash is obscurity, not security: everything needed to cheat ships in `dist/`
 by design. It just makes casual cheating harder.
