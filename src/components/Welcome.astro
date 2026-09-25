@@ -1,6 +1,7 @@
 ---
 import Button from '../components/Button.astro'
 import { mdiArrowRight } from '@mdi/js'
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/')
 ---
 
 <div class="landing">
@@ -13,7 +14,7 @@ import { mdiArrowRight } from '@mdi/js'
       inside it.
     </p>
     <p class="description">The applications work. The code is where things go wrong.</p>
-    <a class="start" href="/repo?case=alpha">
+    <a class="start" href={`${base}repo?case=alpha`}>
       <Button icon={mdiArrowRight} label="Get started" ariaLabel="Get started" />
     </a>
   </section>

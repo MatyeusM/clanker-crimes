@@ -1,0 +1,29 @@
+name: Retarget to dev
+
+# PRs must target dev; master only receives merges that cut a release.
+# This workflow moves PRs opened against master over to dev automatically.
+on:
+  pull_request_target:
+    types: [opened]
+
+jobs:
+  retarget:
+    if: github.event.pull_request.base.ref == 'master'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Retarget pull request to dev
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          if gh pr edit "$PR_NUMBER" --repo "$REPO" --base dev; then
+            gh pr comment "$PR_NUMBER" --repo "$REPO" --body \
+              "This project merges to \`dev\` — I moved this PR there automatically. Releases are cut from \`master\`."
+          else
+            gh pr comment "$PR_NUMBER" --repo "$REPO" --body \
+              "Please retarget this PR to \`dev\` (I tried automatically but the \`dev\` branch seems to be missing). Releases are cut from \`master\`."
+            exit 1
+          fi

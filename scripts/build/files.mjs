@@ -98,6 +98,15 @@ export function highlightable(files) {
   )
 }
 
+// Font / media / binary files are listed in the manifest but never
+// highlighted; the viewer shows a download hint instead of code.
+// Lockfiles stay excluded entirely — they are noise by design, not binaries.
+export function isListedBinary(file) {
+  const name = file.rel.split('/').pop()
+  if (name.endsWith('.lock') || SKIP_FILES.has(name)) return false
+  return SKIP_EXTS.has(file.ext)
+}
+
 // A crime key is optionally prefixed with "ext:" (e.g. "ts:any-spam").
 // Unprefixed crimes apply to every package; prefixed ones only to packages
 // containing a matching file extension.

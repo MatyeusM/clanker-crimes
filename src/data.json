@@ -35,9 +35,19 @@
     "description": "The same block duplicated across files with tiny variations instead of a shared helper."
   },
   {
-    "key": "dead-code",
-    "name": "Dead Code",
-    "description": "Functions and branches that can never run, left behind because deleting felt risky."
+    "key": "abandoned-files",
+    "name": "Abandoned Files",
+    "description": "Whole files or directories that no running code ever imports, left behind because deleting felt risky."
+  },
+  {
+    "key": "unused-functions",
+    "name": "Unused Functions",
+    "description": "Functions and methods that are never called, left behind because deleting felt risky."
+  },
+  {
+    "key": "short-circuited-logic",
+    "name": "Short-Circuited Logic",
+    "description": "Branches and cases that can never execute, left behind because deleting felt risky."
   },
   {
     "key": "inconsistent-naming",
@@ -100,6 +110,16 @@
     "description": "One function that does two different things depending on a boolean you pass it."
   },
   {
+    "key": "scattered-logs",
+    "name": "Scattered Debug Logs",
+    "description": "println, console.log or printf calls scattered through logic instead of a real logging setup."
+  },
+  {
+    "key": "long-parameter-list",
+    "name": "Long Parameter List",
+    "description": "Functions taking six or more positional arguments, each adding another reason to break."
+  },
+  {
     "key": "ts:any-spam",
     "name": "Any Everywhere",
     "description": "Every prop, event and helper typed as any while the validation schemas sit right there unused."
@@ -128,6 +148,21 @@
     "key": "ts:effect-abuse",
     "name": "Effect Abuse",
     "description": "Effects used for derived state and event handling that plain computation would cover."
+  },
+  {
+    "key": "ts:zod-bloat",
+    "name": "Zod Bloat",
+    "description": "Full zod bundled for a handful of string checks where zod-mini or valibot would do at a fraction of the size."
+  },
+  {
+    "key": "ts:json-clone",
+    "name": "JSON Clone",
+    "description": "Objects deep-cloned through a JSON round-trip instead of structuredClone, dropping Dates and undefined on the floor."
+  },
+  {
+    "key": "ts:remount-key",
+    "name": "Remount Key",
+    "description": "A filter-derived key on the whole list that destroys and rebuilds every row on each keystroke instead of just filtering."
   },
   {
     "key": "rs:unwrap-spam",
@@ -160,21 +195,6 @@
     "description": "The unit tests live inside the shipping library file, inflating the artifact they test."
   },
   {
-    "key": "ts:zod-bloat",
-    "name": "Zod Bloat",
-    "description": "Full zod bundled for a handful of string checks where zod-mini or valibot would do at a fraction of the size."
-  },
-  {
-    "key": "ts:json-clone",
-    "name": "JSON Clone",
-    "description": "Objects deep-cloned through a JSON round-trip instead of structuredClone, dropping Dates and undefined on the floor."
-  },
-  {
-    "key": "ts:remount-key",
-    "name": "Remount Key",
-    "description": "A filter-derived key on the whole list that destroys and rebuilds every row on each keystroke instead of just filtering."
-  },
-  {
     "key": "go:interface-spam",
     "name": "Interface Spam",
     "description": "Single-implementation interfaces for every package, depended on by nothing."
@@ -202,7 +222,7 @@
   {
     "key": "py:except-comma",
     "name": "Python-2 Except",
-    "description": "An exception tuple written with Python-2 comma syntax instead of parentheses."
+    "description": "A comma in an except clause without parentheses, which only became legal again in Python 3.14 (PEP 758) and reads as a legacy habit outside that version."
   },
   {
     "key": "py:fstring-html",

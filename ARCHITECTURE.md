@@ -49,7 +49,9 @@ rebuilds `dist/case/` from scratch, which would delete the route's own HTML
 Per case in `dist/case/<slug>/`:
 
 - `light/<path>.html`, `dark/<path>.html` — highlighted source, theme-matched
-- `files.json` — `[{ path, size }]` manifest driving the file tree
+- `files.json` — `[{ path, size, binary? }]` manifest driving the file tree
+  (binary font/media files are listed with `binary: true` and no HTML; the
+  viewer shows a download hint for those instead of code)
 - `artifact.zip` — full package (keeps lockfiles, drops `node_modules/`, `target/`, `dist/`, `.git/`)
 - `preview.html` — vite projects only (see preview policy)
 - `meta.json` — `{ hasPreview }`, so the viewer never probes for files

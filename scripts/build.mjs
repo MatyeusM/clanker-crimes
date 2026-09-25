@@ -3,7 +3,8 @@
 //
 // Per case it produces:
 //   light/<path>.html, dark/<path>.html  shiki-highlighted source (ayu themes)
-//   files.json                            manifest of highlighted files
+//   files.json                            manifest of listed files
+//                                         ({ path, size, binary? })
 //   artifact.zip                          the full package for inspection
 //   preview.html                          single-file vite build (vite only)
 //   meta.json                             { hasPreview } so the frontend never
@@ -65,8 +66,8 @@ async function main() {
     debug(`slug: ${slug}`)
 
     const files = walkPackage(pkgDir)
-    const count = await highlightPackage(pkgDir, caseDir, files)
-    console.log(`  highlighted ${count} files`)
+    const { highlighted, listed } = await highlightPackage(pkgDir, caseDir, files)
+    console.log(`  listed ${listed} files (${highlighted} highlighted)`)
 
     zipPackage(pkgDir, resolve(caseDir, 'artifact.zip'))
     console.log('  wrote artifact.zip')

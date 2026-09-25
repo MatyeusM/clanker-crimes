@@ -1,0 +1,80 @@
+name: Release
+
+# Every commit on master cuts a GitHub release with the built site.
+# The real case solutions come from the CASE_SOLUTIONS secret, which must
+# hold the exact JSON contents of .env.local.json (an array of
+# [{ pkg, crimes }]). Builder output stays spoiler-free by design, so no
+# slugs, hashes, or solution filenames ever reach the logs.
+on:
+  push:
+    branches: [master]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Restore solutions from secret
+        env:
+          CASE_SOLUTIONS: ${{ secrets.CASE_SOLUTIONS }}
+        run: |
+          if [ -z "$CASE_SOLUTIONS" ]; then
+            echo "::error::CASE_SOLUTIONS secret is not set (expected the JSON contents of .env.local.json)"
+            exit 1
+          fi
+          printf '%s' "$CASE_SOLUTIONS" > .env.local.json
+          node -e "JSON.parse(require('fs').readFileSync('.env.local.json', 'utf8'))"
+
+      - name: Build site
+        run: pnpm build
+
+      - name: Package site
+        run: |
+          cd dist
+          zip -qr ../site.zip .
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="master-$(date +%Y%m%d)-${GITHUB_SHA::7}"
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --notes "Automated build from master (${GITHUB_SHA::7})." \
+            site.zip
+
+      # Same dist/ that shipped in the release goes live on Pages.
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

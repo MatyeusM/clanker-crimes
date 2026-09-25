@@ -10,6 +10,7 @@ import {
   mdiChevronUp,
   mdiChevronDown,
 } from '@mdi/js'
+const siteBase = import.meta.env.BASE_URL.replace(/\/$/, '')
 ---
 
 <Layout>
@@ -63,20 +64,39 @@ import {
           </div>
         </form>
         <div class="victory" hidden>
-          <h2>Case closed.</h2>
-          <p>You caught every crime the clanker left behind. Tell your friends about it.</p>
+          <h2>All clankers seen through.</h2>
+          <p>You successfully saw through all clankers. Share this with friends!</p>
           <div class="victory-actions">
-            <Button label="Copy case link" ariaLabel="Copy case link" />
+            <Button label="Copy share link" ariaLabel="Copy share link" />
             <a class="victory-share" target="_blank" rel="noopener">Post about it</a>
           </div>
+          <p class="victory-copied" hidden>Share link copied to your clipboard.</p>
         </div>
       </div>
     </section>
+
+    <div class="triumph" hidden>
+      <div class="triumph-banner" role="status">
+        <p class="triumph-kicker">CASE CLOSED</p>
+        <h2 class="triumph-title">CLANKER SEEN THROUGH</h2>
+        <div class="triumph-rule" aria-hidden="true"></div>
+        <button type="button" class="triumph-btn">Next case</button>
+      </div>
+    </div>
   </div>
 </Layout>
 
 <script
-  define:vars={{ mdiDownload, mdiEye, mdiFolder, mdiFile, mdiGavel, mdiChevronUp, mdiChevronDown }}
+  define:vars={{
+    mdiDownload,
+    mdiEye,
+    mdiFolder,
+    mdiFile,
+    mdiGavel,
+    mdiChevronUp,
+    mdiChevronDown,
+    siteBase,
+  }}
 >
   const root = document.querySelector('.case')
   const viewer = root.querySelector('.viewer')
@@ -97,6 +117,8 @@ import {
   const form = root.querySelector('.verdict-form')
   const verdictError = root.querySelector('.verdict-error')
   const victory = root.querySelector('.victory')
+  const triumph = root.querySelector('.triumph')
+  const triumphBtn = root.querySelector('.triumph-btn')
 
   toggle.querySelector('svg:not(.chevron) path').setAttribute('d', mdiGavel)
   toggleChevron.setAttribute('d', mdiChevronUp)
@@ -105,9 +127,13 @@ import {
 
   const params = new URLSearchParams(location.search)
   const slug = params.get('case') ?? params.get('repo') ?? 'alpha'
-  const base = `/case/${encodeURIComponent(slug)}`
+  const base = `${siteBase}/case/${encodeURIComponent(slug)}`
+  // Landing page URL for sharing: derived at runtime so it works on Pages,
+  // custom domains, and local playtests alike.
+  const landingUrl = `${location.origin}${siteBase}/`
 
   let files = []
+  let entries = new Map()
   let choices = []
   let meta = { hasPreview: false }
   let currentFile = null
@@ -192,11 +218,43 @@ import {
     })
   }
 
+  function formatSize(bytes) {
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+  }
+
+  function binaryNote(entry) {
+    const note = document.createElement('div')
+    note.className = 'binary-note'
+    const title = document.createElement('p')
+    title.className = 'binary-title'
+    title.textContent = 'Not a text file — no preview available.'
+    const hint = document.createElement('p')
+    hint.className = 'binary-hint'
+    const link = document.createElement('a')
+    link.href = `${base}/artifact.zip`
+    link.textContent = '.zip artifact'
+    hint.append(
+      document.createTextNode('Download the '),
+      link,
+      document.createTextNode(` to inspect it (${formatSize(entry.size)}).`),
+    )
+    note.append(title, hint)
+    return note
+  }
+
   async function selectFile(path) {
     currentFile = path
     codeTheme = resolveTheme()
     markSelected()
     codePath.textContent = path
+    const entry = entries.get(path)
+    if (entry?.binary) {
+      codeView.innerHTML = ''
+      codeView.appendChild(binaryNote(entry))
+      return
+    }
     codeView.innerHTML = '<p class="code-loading">Loading file…</p>'
     try {
       const res = await fetch(
@@ -255,26 +313,7 @@ import {
         return
       }
       const { url } = await res.json()
-      if (url) {
-        location.href = `/repo?case=${encodeURIComponent(url)}`
-      } else {
-        form.hidden = true
-        victory.hidden = false
-        const shareText = 'I closed every Clanker Crimes case. The code was guilty.'
-        victory.querySelector('.victory-share').href =
-          `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(location.origin)}`
-        victory.querySelector('.victory-actions button').addEventListener(
-          'click',
-          async () => {
-            try {
-              await navigator.clipboard.writeText(`${shareText} ${location.origin}`)
-            } catch {
-              /* clipboard unavailable */
-            }
-          },
-          { once: true },
-        )
-      }
+      showTriumph(url)
     } catch {
       verdictError.textContent =
         'Could not check your verdict in this browser. A secure context is required.'
@@ -283,6 +322,44 @@ import {
       submitButton.disabled = false
     }
   })
+
+  // Souls-style "boss slain" banner on a correct verdict. It waits for the
+  // player: intermediate cases advance on click, the final case reveals
+  // the victory panel.
+  function showTriumph(url) {
+    const nextHref = url ? `${siteBase}/repo?case=${encodeURIComponent(url)}` : null
+    triumphBtn.textContent = nextHref ? 'Next case' : 'See results'
+    triumph.hidden = false
+    triumphBtn.focus()
+    triumphBtn.onclick = () => {
+      if (nextHref) {
+        location.href = nextHref
+      } else {
+        triumph.hidden = true
+        form.hidden = true
+        victory.hidden = false
+        setupVictoryLinks()
+      }
+    }
+  }
+
+  function setupVictoryLinks() {
+    const shareText = 'I saw through every Clanker Crimes case. The code was guilty.'
+    victory.querySelector('.victory-share').href =
+      `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(landingUrl)}`
+    victory.querySelector('.victory-actions button').addEventListener(
+      'click',
+      async () => {
+        try {
+          await navigator.clipboard.writeText(`${shareText} ${landingUrl}`)
+          victory.querySelector('.victory-copied').hidden = false
+        } catch {
+          /* clipboard unavailable */
+        }
+      },
+      { once: true },
+    )
+  }
 
   // Re-render code when the site theme changes.
   document.addEventListener('click', event => {
@@ -313,6 +390,7 @@ import {
     }
 
     files = manifest.map(entry => entry.path)
+    entries = new Map(manifest.map(entry => [entry.path, entry]))
     countEl.textContent = `${files.length} files`
     artifactLink.href = `${base}/artifact.zip`
     if (meta.hasPreview) {
@@ -641,6 +719,134 @@ import {
   .victory-share {
     color: var(--color-brand);
     font-size: 0.85rem;
+  }
+  .victory-copied {
+    margin: 0.75rem 0 0;
+    color: var(--color-success);
+    font-size: 0.8rem;
+  }
+  .victory-copied[hidden] {
+    display: none;
+  }
+
+  .binary-note {
+    padding: 1.5rem 1rem;
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+    line-height: 1.6;
+  }
+  .binary-note p {
+    margin: 0 0 0.5rem;
+  }
+  .binary-title {
+    color: var(--color-text);
+    font-weight: 700;
+  }
+  .binary-hint a {
+    color: var(--color-brand);
+  }
+
+  /* Triumph modal: a Souls-style "boss slain" banner. Theme-independent by
+     design — always a dark cinematic overlay with parchment text. */
+  .triumph[hidden] {
+    display: none;
+  }
+  .triumph {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: rgb(0 0 0 / 0.82);
+    animation: triumph-dim 0.5s ease-out;
+  }
+  .triumph-banner {
+    text-align: center;
+  }
+  .triumph-kicker {
+    margin: 0 0 0.75rem;
+    color: oklch(0.72 0.08 90);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.5em;
+    text-indent: 0.5em;
+    animation: triumph-fade 0.8s ease 0.3s both;
+  }
+  .triumph-title {
+    margin: 0;
+    color: oklch(0.93 0.04 95);
+    font-size: clamp(1.4rem, 5vw, 2.6rem);
+    font-weight: 400;
+    letter-spacing: 0.28em;
+    text-indent: 0.28em;
+    text-shadow: 0 0 1.5rem rgb(232 220 192 / 0.35);
+    animation: triumph-rise 1.4s ease-out both;
+  }
+  .triumph-rule {
+    width: min(28rem, 80vw);
+    height: 1px;
+    margin: 1.4rem auto 0;
+    background: linear-gradient(to right, transparent, oklch(0.78 0.1 90), transparent);
+    animation: triumph-fade 0.8s ease 0.6s both;
+  }
+  .triumph-btn {
+    margin-top: 1.75rem;
+    border: 1px solid oklch(0.62 0.08 90);
+    background: transparent;
+    padding: 0.6rem 1.6rem;
+    color: oklch(0.93 0.04 95);
+    font: inherit;
+    font-size: 0.9rem;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    animation: triumph-btn 0.5s ease 1.3s both;
+  }
+  .triumph-btn:hover {
+    background: rgb(232 220 192 / 0.12);
+  }
+  .triumph-btn:focus-visible {
+    outline: 2px solid oklch(0.78 0.1 90);
+    outline-offset: 2px;
+  }
+  @keyframes triumph-dim {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes triumph-fade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes triumph-rise {
+    from {
+      opacity: 0;
+      letter-spacing: 0.6em;
+      filter: blur(6px);
+    }
+    to {
+      opacity: 1;
+      letter-spacing: 0.28em;
+      filter: blur(0);
+    }
+  }
+  @keyframes triumph-btn {
+    from {
+      opacity: 0;
+      transform: translateY(0.5rem);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
   }
 
   @media (max-width: 720px) {

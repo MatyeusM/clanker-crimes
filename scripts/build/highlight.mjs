@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { escapeHtml, highlightable } from './files.mjs'
+import { escapeHtml, highlightable, isListedBinary } from './files.mjs'
 
 export const LIGHT_THEME = 'ayu-light'
 export const DARK_THEME = 'ayu-dark'
@@ -49,6 +49,8 @@ function plainFallback(code) {
 
 // Renders every highlightable file of a package twice (light + dark theme)
 // into <caseDir>/{light,dark}/<relpath>.html, plus a files.json manifest.
+// Binary files get a { path, size, binary: true } manifest entry with no HTML;
+// the viewer renders a download hint for those instead of code.
 export async function highlightPackage(pkgDir, caseDir, files) {
   const { bundledLanguages, bundledThemes, createHighlighter } = await import('shiki')
   if (!(LIGHT_THEME in bundledThemes) || !(DARK_THEME in bundledThemes)) {
@@ -82,8 +84,12 @@ export async function highlightPackage(pkgDir, caseDir, files) {
       writeFileSync(darkFile, `${outputs[DARK_THEME]}\n`)
       manifest.push({ path: file.rel, size: file.size })
     }
+    for (const file of files.filter(isListedBinary)) {
+      manifest.push({ path: file.rel, size: file.size, binary: true })
+    }
+    manifest.sort((a, b) => (a.path < b.path ? -1 : 1))
     writeFileSync(join(caseDir, 'files.json'), `${JSON.stringify(manifest, null, 2)}\n`)
-    return manifest.length
+    return { highlighted: targets.length, listed: manifest.length }
   } finally {
     highlighter.dispose()
   }
